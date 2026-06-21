@@ -2,6 +2,7 @@
 /keqrnel
 /keqrnel.exe
 *.exe
+*.so
 *.test
 *.log
 

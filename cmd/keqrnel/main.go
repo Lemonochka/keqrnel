@@ -5,6 +5,7 @@ package main
 import (
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 
 	"github.com/sagernet/sing-box/log"
@@ -13,10 +14,7 @@ import (
 )
 
 func main() {
-	configPath := "config.json"
-	if len(os.Args) > 1 {
-		configPath = os.Args[1]
-	}
+	configPath := parseConfigPath(os.Args[1:])
 
 	content, err := os.ReadFile(configPath)
 	if err != nil {
@@ -41,4 +39,26 @@ func main() {
 	if err = instance.Close(); err != nil {
 		log.Error("close: ", err)
 	}
+}
+
+// parseConfigPath resolves the config path from CLI args, accepting both
+// keqrnel's own `keqrnel <config>` form and xray's `run -c <config>` form so the
+// binary is a drop-in replacement for xray in keqdroid's launcher (which
+// fork+execs the core the same way regardless of engine).
+func parseConfigPath(args []string) string {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "-c", "-config", "--config":
+			if i+1 < len(args) {
+				return args[i+1]
+			}
+		case "run":
+			continue // xray subcommand, ignore
+		default:
+			if !strings.HasPrefix(args[i], "-") {
+				return args[i]
+			}
+		}
+	}
+	return "config.json"
 }
