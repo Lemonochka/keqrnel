@@ -1,0 +1,77 @@
+{
+  "log": {
+    "level": "info"
+  },
+  "dns": {
+    "servers": [
+      { "tag": "remote", "type": "https", "server": "1.1.1.1", "detour": "proxy" }
+    ],
+    "final": "remote"
+  },
+  "inbounds": [
+    {
+      "type": "tun",
+      "tag": "tun-in",
+      "address": ["172.18.0.1/30", "fdfe:dcba:9876::1/126"],
+      "auto_route": true,
+      "strict_route": true,
+      "stack": "system"
+    }
+  ],
+  "outbounds": [
+    {
+      "type": "xray",
+      "tag": "proxy",
+      "xray": {
+        "outbounds": [
+          {
+            "protocol": "vless",
+            "tag": "vless-out",
+            "settings": {
+              "vnext": [
+                {
+                  "address": "YOUR_SERVER_ADDRESS",
+                  "port": 443,
+                  "users": [
+                    {
+                      "id": "YOUR_UUID",
+                      "encryption": "none",
+                      "flow": "xtls-rprx-vision"
+                    }
+                  ]
+                }
+              ]
+            },
+            "streamSettings": {
+              "network": "xhttp",
+              "security": "reality",
+              "realitySettings": {
+                "serverName": "www.microsoft.com",
+                "fingerprint": "chrome",
+                "publicKey": "YOUR_REALITY_PUBLIC_KEY",
+                "shortId": "YOUR_SHORT_ID",
+                "spiderX": "/"
+              },
+              "xhttpSettings": {
+                "path": "/your-xhttp-path",
+                "mode": "auto"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "direct",
+      "tag": "direct"
+    }
+  ],
+  "route": {
+    "auto_detect_interface": true,
+    "final": "proxy",
+    "rules": [
+      { "action": "sniff" },
+      { "protocol": "dns", "action": "hijack-dns" }
+    ]
+  }
+}

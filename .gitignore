@@ -1,0 +1,15 @@
+# Binaries
+/keqrnel
+/keqrnel.exe
+*.exe
+*.test
+*.log
+
+# Local config with real credentials
+/config.json
+
+# IDE
+/.idea/
+
+# Go
+/vendor/
