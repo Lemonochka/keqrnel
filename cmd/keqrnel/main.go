@@ -50,10 +50,18 @@ func main() {
 	// Graceful shutdown when the parent closes our stdin. On Windows there is no
 	// real SIGTERM — Dart's Process.kill is a hard TerminateProcess that gives
 	// sing-box no chance to revert the TUN adapter, routes and DNS, which can
-	// leave the network/TUN broken after a disconnect or crash. The launcher
-	// closes our stdin to ask for a clean stop instead; we also exit if the pipe
-	// breaks (parent died), so we never linger holding the tunnel.
+	// leave the network/TUN broken after a disconnect or crash. The desktop
+	// launcher wires up a stdin pipe and closes it to ask for a clean stop.
+	//
+	// Only watch stdin when it is an actual pipe. Under Android's fork+exec stdin
+	// is /dev/null or closed, so reading it returns EOF immediately — that must
+	// NOT be taken as a shutdown request (it would kill the tunnel the instant it
+	// starts).
 	go func() {
+		info, err := os.Stdin.Stat()
+		if err != nil || info.Mode()&os.ModeNamedPipe == 0 {
+			return
+		}
 		io.Copy(io.Discard, os.Stdin)
 		requestStop()
 	}()
