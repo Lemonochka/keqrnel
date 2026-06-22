@@ -61,3 +61,54 @@ func TestEngineRoundTrip(t *testing.T) {
 		t.Fatalf("round-trip mismatch: got %q want %q", got, want)
 	}
 }
+
+// TestEngineUDPRoundTrip proves the connected-UDP path (DialContext("udp")) —
+// the one DNS-over-proxy uses — works through the embedded engine.
+func TestEngineUDPRoundTrip(t *testing.T) {
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pc.Close()
+	go func() {
+		buf := make([]byte, 1500)
+		for {
+			n, addr, err := pc.ReadFrom(buf)
+			if err != nil {
+				return
+			}
+			pc.WriteTo(buf[:n], addr)
+		}
+	}()
+
+	const cfg = `{ "outbounds": [{ "protocol": "freedom", "settings": {} }] }`
+	engine, err := NewEngine([]byte(cfg))
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+	defer engine.Close()
+
+	addr := pc.LocalAddr().(*net.UDPAddr)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	conn, err := engine.DialUDP(ctx, "127.0.0.1", uint16(addr.Port))
+	if err != nil {
+		t.Fatalf("DialUDP: %v", err)
+	}
+	defer conn.Close()
+
+	want := []byte("udp via keqrnel")
+	if _, err = conn.Write(want); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	conn.SetReadDeadline(time.Now().Add(3 * time.Second))
+	got := make([]byte, len(want))
+	n, err := conn.Read(got)
+	if err != nil {
+		t.Fatalf("read: %v", err)
+	}
+	if string(got[:n]) != string(want) {
+		t.Fatalf("udp round-trip mismatch: got %q want %q", got[:n], want)
+	}
+}

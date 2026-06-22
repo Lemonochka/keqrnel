@@ -85,16 +85,22 @@ func (o *Outbound) currentEngine() (*Engine, error) {
 	return engine, nil
 }
 
-// DialContext dispatches a TCP connection through the xray engine.
+// DialContext dispatches a connection through the xray engine. TCP returns a
+// stream conn; UDP returns a connected packet conn (used e.g. for DNS-over-UDP
+// through the proxy, which sing-box dials via DialContext rather than ListenPacket).
 func (o *Outbound) DialContext(ctx context.Context, network string, destination M.Socksaddr) (net.Conn, error) {
-	if N.NetworkName(network) != N.NetworkTCP {
-		return nil, E.New("xray outbound: unsupported network for stream dial: ", network)
-	}
 	engine, err := o.currentEngine()
 	if err != nil {
 		return nil, err
 	}
-	return engine.DialTCP(ctx, host(destination), destination.Port)
+	switch N.NetworkName(network) {
+	case N.NetworkTCP:
+		return engine.DialTCP(ctx, host(destination), destination.Port)
+	case N.NetworkUDP:
+		return engine.DialUDP(ctx, host(destination), destination.Port)
+	default:
+		return nil, E.New("xray outbound: unsupported network: ", network)
+	}
 }
 
 // ListenPacket dispatches UDP datagrams through the xray engine. The returned
@@ -105,7 +111,7 @@ func (o *Outbound) ListenPacket(ctx context.Context, destination M.Socksaddr) (n
 	if err != nil {
 		return nil, err
 	}
-	return engine.DialUDP(ctx)
+	return engine.DialUDPPacket(ctx)
 }
 
 // Close stops the embedded xray engine.

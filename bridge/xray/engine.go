@@ -41,9 +41,19 @@ func (e *Engine) DialTCP(ctx context.Context, host string, port uint16) (xnet.Co
 	return core.Dial(ctx, e.instance, dest)
 }
 
-// DialUDP returns a PacketConn that dispatches UDP datagrams through the xray
-// instance. Per-destination routing happens inside xray's dispatcher.
-func (e *Engine) DialUDP(ctx context.Context) (xnet.PacketConn, error) {
+// DialUDP opens a connected UDP conn to dest through the xray instance. xray's
+// core.Dial returns a net.Conn bound to the destination for UDP destinations,
+// which is what sing-box's DialContext("udp", …) path (e.g. DNS-over-UDP via the
+// proxy) expects.
+func (e *Engine) DialUDP(ctx context.Context, host string, port uint16) (xnet.Conn, error) {
+	dest := xnet.UDPDestination(xnet.ParseAddress(host), xnet.Port(port))
+	return core.Dial(ctx, e.instance, dest)
+}
+
+// DialUDPPacket returns a PacketConn that dispatches UDP datagrams through the
+// xray instance. Per-destination routing happens inside xray's dispatcher; used
+// for the ListenPacket path (TUN UDP NAT sessions).
+func (e *Engine) DialUDPPacket(ctx context.Context) (xnet.PacketConn, error) {
 	return core.DialUDP(ctx, e.instance)
 }
 
