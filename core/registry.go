@@ -21,6 +21,8 @@ import (
 	"github.com/sagernet/sing-box/dns/transport/fakeip"
 	"github.com/sagernet/sing-box/dns/transport/hosts"
 	"github.com/sagernet/sing-box/experimental/deprecated"
+	// clash_api server (traffic counters over HTTP); enabled per-config.
+	_ "github.com/sagernet/sing-box/experimental/clashapi"
 	"github.com/sagernet/sing-box/log"
 	"github.com/sagernet/sing-box/protocol/block"
 	"github.com/sagernet/sing-box/protocol/direct"
