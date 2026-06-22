@@ -3,6 +3,7 @@
 package main
 
 import (
+	"io"
 	"os"
 	"os/signal"
 	"strings"
@@ -31,10 +32,33 @@ func main() {
 	}
 	log.Info("keqrnel started")
 
-	stop := make(chan os.Signal, 1)
-	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
-	<-stop
+	stop := make(chan struct{}, 1)
+	requestStop := func() {
+		select {
+		case stop <- struct{}{}:
+		default:
+		}
+	}
 
+	sigCh := make(chan os.Signal, 1)
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+	go func() {
+		<-sigCh
+		requestStop()
+	}()
+
+	// Graceful shutdown when the parent closes our stdin. On Windows there is no
+	// real SIGTERM — Dart's Process.kill is a hard TerminateProcess that gives
+	// sing-box no chance to revert the TUN adapter, routes and DNS, which can
+	// leave the network/TUN broken after a disconnect or crash. The launcher
+	// closes our stdin to ask for a clean stop instead; we also exit if the pipe
+	// breaks (parent died), so we never linger holding the tunnel.
+	go func() {
+		io.Copy(io.Discard, os.Stdin)
+		requestStop()
+	}()
+
+	<-stop
 	log.Info("keqrnel shutting down")
 	if err = instance.Close(); err != nil {
 		log.Error("close: ", err)
