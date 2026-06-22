@@ -9,12 +9,7 @@ import (
 
 	xnet "github.com/xtls/xray-core/common/net"
 	"github.com/xtls/xray-core/core"
-
-	// Side-effect imports: register all xray protocol/transport features and
-	// the JSON config loader. Without distro/all the VLESS/XHTTP/Reality stack
-	// is not linked in; without main/json the "json" config format is unknown.
-	_ "github.com/xtls/xray-core/main/distro/all"
-	_ "github.com/xtls/xray-core/main/json"
+	// xray feature registration (curated) lives in distro.go.
 )
 
 // Engine wraps a started xray-core Instance configured with a single outbound
