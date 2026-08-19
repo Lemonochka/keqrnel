@@ -8,7 +8,7 @@
 
 <p align="center">
   A single proxy core: a <strong>sing-box host</strong> with an <strong>embedded xray engine</strong>.<br>
-  One process instead of the usual <code>xray → sing-box</code> pair.
+  TUN, routing and DNS from sing-box; the protocols run on xray's own code.
 </p>
 
 <p align="center">
@@ -112,8 +112,8 @@ sing-box v1.13.13 · xray-core v1.260327.0 · Go 1.26+
   <a href="#keqrnel">English</a> · <strong>Русский</strong>
 </p>
 
-Единое прокси-ядро: **host на sing-box со встроенным движком xray**. Один процесс
-вместо привычной пары `xray → sing-box`.
+Единое прокси-ядро: **host на sing-box со встроенным движком xray**. TUN, роутинг и
+DNS — от sing-box, протоколы исполняет код самого xray.
 
 ### Что это
 
