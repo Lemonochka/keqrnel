@@ -1,16 +1,23 @@
-# Binaries
+# Build output
 /keqrnel
 /keqrnel.exe
+/dist/
 *.exe
 *.so
 *.test
+*.out
+
+# Local config: this is where real server credentials end up
+/config.json
+*.local.json
+
+# Runtime
 *.log
 
-# Local config with real credentials
-/config.json
-
-# IDE
+# IDE / OS
 /.idea/
+/.vscode/
+.DS_Store
 
 # Go
 /vendor/

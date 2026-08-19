@@ -1,10 +1,10 @@
 // Package service is keqrnel's programmatic entry point: build a running
-// instance from a config, with an optional platform interface for Android.
+// instance from a config.
 //
-// On Android the TUN device fd and socket protection come from the OS via
-// sing-box's adapter.PlatformInterface. The gomobile binding layer (keqdroid)
-// supplies that interface; everything below is plain Go and fully testable on
-// desktop without it. See ANDROID.md.
+// Options.Platform is there for hosts that hand out the TUN fd and protect
+// sockets themselves (Android's VpnService, via sing-box's
+// adapter.PlatformInterface). Nothing in this repo supplies one — on desktop it
+// stays nil and everything here is plain Go.
 package service
 
 import (
@@ -17,7 +17,7 @@ import (
 	"github.com/sagernet/sing/common/json"
 	singservice "github.com/sagernet/sing/service"
 
-	"github.com/keqdroid/keqrnel/core"
+	"github.com/Lemonochka/keqrnel/core"
 )
 
 // Options tunes how an Instance is built.

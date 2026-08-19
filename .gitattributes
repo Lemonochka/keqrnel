@@ -1,0 +1,6 @@
+# Keep line endings LF in the repository regardless of the contributor's platform
+# (this project is developed on Windows, where core.autocrlf is usually on).
+* text=auto eol=lf
+
+*.png binary
+*.dat binary

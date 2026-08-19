@@ -33,8 +33,8 @@ import (
 	"github.com/sagernet/sing-box/protocol/tun"
 	"github.com/sagernet/sing/service"
 
-	xraybridge "github.com/keqdroid/keqrnel/bridge/xray"
-	"github.com/keqdroid/keqrnel/core/localdns"
+	xraybridge "github.com/Lemonochka/keqrnel/bridge/xray"
+	"github.com/Lemonochka/keqrnel/core/localdns"
 )
 
 // Context returns a context carrying keqrnel's curated registries plus the xray

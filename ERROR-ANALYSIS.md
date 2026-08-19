@@ -1,83 +1,77 @@
-# keqrnel — анализ ошибок и риски
+# Hazards, trade-offs and limits
 
-Глубокий разбор по реальным исходникам sing-box v1.13.13 / xray-core v1.260327.0.
-Статусы: **FIXED** (исправлено), **OK** (проверено, корректно), **ACCEPTED**
-(осознанный компромисс), **TODO** (требует внимания на следующих этапах).
+What auditing keqrnel against the sing-box v1.13.13 and xray-core v1.260327.0 sources
+turned up: the failure modes embedding one core inside another produces, and what is
+left alone on purpose.
 
-## Жизненный цикл / ресурсы
+## Lifecycle
 
-- **FIXED — утечка xray-инстанса при частичном фейле `box.New`.**
-  Движок стартовал в `New()` (во время конструирования Box). Если другой
-  outbound падал позже, наш `Close()` не вызывался → инстанс утекал. Особенно
-  опасно на Android (частые релоады). Решение: bridge-outbound реализует
-  `adapter.Lifecycle` — движок стартует в `Start(StartStateStart)`, закрывается
-  в `Close()`. Парность гарантирована. См. [bridge/xray/outbound.go](bridge/xray/outbound.go).
+**The xray instance could leak on a partial `box.New` failure.** The engine used to
+start in `New()`, while the Box was still under construction; if a later outbound
+failed to build, our `Close()` was never called. The outbound now implements
+`adapter.Lifecycle` — engine starts in `Start(StartStateStart)`, stops in `Close()` —
+so the pairing holds wherever construction fails.
 
-- **OK — `Close()` действительно вызывается.** `outbound.Manager.Close()`
-  закрывает каждый outbound через `io.Closer`; при замене/удалении (релоад) —
-  `common.Close(existsOutbound)`. Наш `Close() error` подходит под оба пути.
+`Close()` is reached on both paths: `outbound.Manager.Close()` closes every outbound
+through `io.Closer`, and a reload that replaces or drops one calls
+`common.Close(existsOutbound)`.
 
-- **FIXED — гонка движка при остановке.** Доступ к `engine` под `sync.RWMutex`;
-  после `Close()` поле обнуляется, `currentEngine()` отдаёт явную ошибку вместо
-  nil-разыменования при гонке dial/close.
+**Engine race on shutdown.** The `engine` field is under a `sync.RWMutex` and nilled
+on close; `currentEngine()` returns an error instead of dereferencing nil when a dial
+races a close.
 
-- **ACCEPTED — до ~60 с висящая UDP-горутина после закрытия сессии.**
-  xray `dispatcherConn` чистит связанный `connEntry` по таймеру неактивности
-  (1 мин), а не мгновенно при `Close()`. Для UDP приемлемо; число горутин
-  ограничено числом активных сессий.
+**A UDP goroutine can linger up to ~60 s after its session ends.** xray's
+`dispatcherConn` reclaims the `connEntry` on a one-minute inactivity timer, not on
+`Close()`. Accepted: the count stays bounded by active sessions.
 
-## Сеть / корректность данных
+## Network
 
-- **OK — UDP-маршрутизация по назначению.** Каждый UDP-flow из TUN вызывает
-  `ListenPacket` отдельно → свой `dispatcherConn`; `WriteTo` кладёт назначение
-  в каждый пакет (`buffer.UDP`). Так как xray-инстанс у нас = один outbound
-  (роутинг на стороне sing-box), мультиплекс на один линк проблемы не создаёт.
+**UDP is routed per destination.** Every UDP flow out of the TUN gets its own
+`ListenPacket` and therefore its own `dispatcherConn`, and `WriteTo` carries the
+destination in each packet. The embedded instance is effectively a single outbound
+(routing lives on the sing-box side), so multiplexing onto one link is unambiguous.
 
-- **OK — типы соединений.** `xnet.Conn`/`xnet.PacketConn` у xray — алиасы
-  stdlib `net.Conn`/`net.PacketConn`, совместимы с `N.Dialer` напрямую.
+**`DialContext` handles TCP and connected UDP only.** Unconnected UDP is rejected
+with an explicit error and goes through `ListenPacket`, matching sing-box's TUN NAT
+model.
 
-- **OK — адреса.** `host()` отдаёт FQDN либо строковый IP; `xnet.ParseAddress`
-  корректно различает домен/IPv4/IPv6.
+`host()` yields an FQDN or a string IP, and `xnet.ParseAddress` tells domain, IPv4
+and IPv6 apart correctly.
 
-- **ACCEPTED — `DialContext` только TCP.** UDP через `DialContext` отклоняется
-  явной ошибкой; весь UDP идёт штатным путём `ListenPacket`. Соответствует
-  модели sing-box TUN NAT.
+## Platform
 
-## Платформа / сборка
+**sing-box v1.13.13 does not build on Windows.** Its pinned `sing-tun` renamed
+`MyInterface()` to `MyInterfaces()`, while `dns/transport/local/resolv_windows.go`
+still calls the old name. The file is Windows-only, so Linux is unaffected. keqrnel
+avoids `include.*`, which would pull that package in, and curates registries in
+[core/registry.go](core/registry.go).
 
-- **FIXED — sing-box v1.13.13 не собирается под Windows.** Его пин sing-tun
-  переименовал `MyInterface()` → `MyInterfaces()`, а `dns/transport/local/
-  resolv_windows.go` зовёт старое имя. Это windows-only файл (Android/Linux не
-  затронуты). Решение: не использовать `include.*` (тянет весь легаси, включая
-  этот пакет), а собирать курированные registry в [core/registry.go](core/registry.go).
+**A `local` DNS transport is mandatory.** sing-box creates a default DNS fallback of
+that type at startup; without one registered it fails with
+`default DNS server fallback: transport type not found: local`. Ours is backed by
+`net.Resolver` ([core/localdns/local.go](core/localdns/local.go)).
 
-- **FIXED — обязательный `local` DNS-транспорт.** sing-box на старте создаёт
-  дефолтный DNS-fallback типа `local` (box.go ~327). Без регистрации:
-  `default DNS server fallback: transport type not found: local`. Реализован
-  свой кросс-платформенный транспорт на `net.Resolver`
-  ([core/localdns/local.go](core/localdns/local.go)) — как делает libbox для Android.
+Native Windows/amd64 and cross linux/amd64, linux/arm64, darwin/arm64 all build clean.
 
-- **OK — целевые платформы собираются.** Нативно Windows/amd64, кросс
-  linux/amd64 и linux/arm64 (Android-арх) — все `go build ./...` = 0.
+## Config
 
-## Конфиг / поведение
+The `xray` field is taken 1:1 and xray executes the protocols, so what reaches the
+server matches upstream xray byte for byte. Malformed configs and an empty `xray`
+fragment return errors rather than panicking (`TestInvalidConfigReports`, plus the
+check in `New`).
 
-- **OK — паритет с серверами.** Поле `xray` принимает сырой xray-конфиг 1:1;
-  протоколы исполняет сам xray → байт-в-байт совпадение с серверами на свежем
-  xray (VLESS/XHTTP/Reality/Vision/Mux/Hysteria2).
+**Interop with live servers is not covered by the tests.** They prove the engine
+moves traffic; whether a given Reality / XHTTP / Hysteria2 server is happy depends on
+the fragment you feed in, which keqrnel passes through untouched. That translation is
+the caller's job and the first place to look when one specific server misbehaves.
 
-- **OK — ошибки конфига не паникуют.** Малформед-конфиг и пустой `xray`-фрагмент
-  отдают ошибку (`TestInvalidConfigReports`, проверка в `New`).
+## Tests
 
-- **TODO — реальный interop Reality/XHTTP/Hysteria2.** Проверено, что движок
-  гоняет трафик (freedom round-trip + curl через socks→xray→интернет, HTTP 200).
-  Полный interop с конкретными серверами требует прогона с боевым конфигом —
-  невозможно здесь без её серверов. Риск только в трансляции шер-линк → xray
-  JSON, которая переиспользуется из keqdroid как есть.
+| Package | Covers |
+|---|---|
+| `bridge/xray` | TCP and UDP round-trips through a real `core.Dial` |
+| `core` | the example config decodes through the curated registries |
+| `service` | full New / Start / Close with route rules; error on a broken config |
 
-## Покрытие тестами
-
-- `bridge/xray`: round-trip реального коннекта через `core.Dial`.
-- `core`: парс example-конфига через курированные registry.
-- `service`: полный New/Start/Close с роут-правилами; ошибка на битом конфиге.
-- Рантайм-смоук: бинарник + `curl` через socks → xray-движок → интернет.
+Beyond that, the binary has been smoke-tested end to end: `curl` through a SOCKS
+inbound, out through the embedded engine, to the internet.

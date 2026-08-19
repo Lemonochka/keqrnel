@@ -11,7 +11,7 @@ import (
 
 	"github.com/sagernet/sing-box/log"
 
-	"github.com/keqdroid/keqrnel/service"
+	"github.com/Lemonochka/keqrnel/service"
 )
 
 func main() {
