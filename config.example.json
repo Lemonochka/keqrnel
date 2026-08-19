@@ -28,19 +28,11 @@
             "protocol": "vless",
             "tag": "vless-out",
             "settings": {
-              "vnext": [
-                {
-                  "address": "YOUR_SERVER_ADDRESS",
-                  "port": 443,
-                  "users": [
-                    {
-                      "id": "YOUR_UUID",
-                      "encryption": "none",
-                      "flow": "xtls-rprx-vision"
-                    }
-                  ]
-                }
-              ]
+              "address": "YOUR_SERVER_ADDRESS",
+              "port": 443,
+              "id": "YOUR_UUID",
+              "encryption": "none",
+              "flow": "xtls-rprx-vision"
             },
             "streamSettings": {
               "network": "xhttp",

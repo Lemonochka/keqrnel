@@ -42,7 +42,11 @@ TUN (sing-tun) ─► routing ─► outbound "proxy" (type: xray)
   "tag": "proxy",
   "xray": {
     "outbounds": [
-      { "protocol": "vless", "settings": { "vnext": [ ... ] }, "streamSettings": { ... } }
+      {
+        "protocol": "vless",
+        "settings": { "address": "example.com", "port": 443, "id": "...", "encryption": "none" },
+        "streamSettings": { ... }
+      }
     ]
   }
 }
@@ -51,6 +55,9 @@ TUN (sing-tun) ─► routing ─► outbound "proxy" (type: xray)
 The `xray` field is a raw xray config fragment, at minimum an `outbounds` array,
 handed to the embedded engine as-is. Everything around it is ordinary sing-box
 config. Full example with TUN and routing: [config.example.json](config.example.json).
+
+Current xray puts the server and credentials directly under `settings`. Older
+configs that wrap them in a `vnext` array still parse, so both forms work.
 
 Hysteria2 is an xray outbound like any other and goes in the same fragment.
 sing-box's `socks` and `http` outbounds are registered as well, so keqrnel can also
@@ -96,7 +103,7 @@ sing-box's `include.*`: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Versions
 
-sing-box v1.13.13 · xray-core v1.260327.0 · Go 1.26+
+sing-box v1.13.19 · xray-core v26.7.28 · Go 1.26+
 
 ## License
 
@@ -131,7 +138,11 @@ xray-core влинкован как библиотека и обслуживае
   "tag": "proxy",
   "xray": {
     "outbounds": [
-      { "protocol": "vless", "settings": { "vnext": [ ... ] }, "streamSettings": { ... } }
+      {
+        "protocol": "vless",
+        "settings": { "address": "example.com", "port": 443, "id": "...", "encryption": "none" },
+        "streamSettings": { ... }
+      }
     ]
   }
 }
@@ -140,6 +151,9 @@ xray-core влинкован как библиотека и обслуживае
 Поле `xray` — сырой фрагмент xray-конфига, как минимум массив `outbounds`, который
 отдаётся встроенному движку как есть. Всё вокруг — обычный конфиг sing-box. Полный
 пример с TUN и роутингом: [config.example.json](config.example.json).
+
+Актуальный xray кладёт адрес сервера и креды прямо в `settings`. Старые конфиги,
+которые заворачивают их в массив `vnext`, тоже разбираются — работают обе формы.
 
 Hysteria2 — такой же xray-аутбаунд, кладётся в тот же фрагмент. Аутбаунды `socks` и
 `http` из sing-box тоже зарегистрированы, так что keqrnel умеет стоять и перед
@@ -185,7 +199,7 @@ sing-box: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Версии
 
-sing-box v1.13.13 · xray-core v1.260327.0 · Go 1.26+
+sing-box v1.13.19 · xray-core v26.7.28 · Go 1.26+
 
 ### Лицензия
 
