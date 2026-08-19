@@ -49,7 +49,7 @@ func Context(ctx context.Context) context.Context {
 		ctx,
 		inboundRegistry(),
 		outboundRegistry(),
-		endpoint.NewRegistry(), // no endpoints: AmneziaWG/WireGuard stay a separate core
+		endpoint.NewRegistry(), // no endpoints: WireGuard/AmneziaWG are out of scope
 		dnsTransportRegistry(),
 		boxservice.NewRegistry(), // no extra services
 	)

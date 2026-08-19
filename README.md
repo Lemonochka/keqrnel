@@ -34,9 +34,6 @@ TUN (sing-tun) ─► routing ─► outbound "proxy" (type: xray)
                               embedded xray.Instance
 ```
 
-Written for [keqdroid/KEQDIS](https://github.com/Lemonochka/keqdroid), but
-independent of it: anything that can write a sing-box config can run it.
-
 ## The `xray` outbound
 
 ```json
@@ -125,9 +122,6 @@ xray-core влинкован как библиотека и обслуживае
 который тянет VLESS, XHTTP, Reality, Vision, Mux, Hysteria2 и всё прочее, что
 принимает его JSON-конфиг. Протоколы исполняет сам xray, поэтому на проводе ровно
 то, чего ждёт сервер, настроенный на свежий xray.
-
-Написано для [keqdroid/KEQDIS](https://github.com/Lemonochka/keqdroid), но от
-приложения не зависит: запустит что угодно, умеющее написать sing-box-конфиг.
 
 ### Аутбаунд `xray`
 

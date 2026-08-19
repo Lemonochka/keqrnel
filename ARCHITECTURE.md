@@ -58,7 +58,7 @@ xray to route internally as well.
 | inbound | tun, mixed, socks, http | everything server-side |
 | outbound | direct, block, selector, urltest, socks, http, **xray** | tor, naive, ssh, and the protocols xray now serves |
 | DNS transport | udp, tcp, tls, https, hosts, fakeip, **local** | dhcp, resolved, other platform glue |
-| endpoint | — | WireGuard/AmneziaWG stay a separate core |
+| endpoint | — | WireGuard/AmneziaWG are out of scope |
 
 `include.*` also pulls in sing-box's `dns/transport/local`, whose Windows file calls
 a method the pinned `sing-tun` renamed, so it does not compile there. A transport
