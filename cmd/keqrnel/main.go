@@ -47,16 +47,14 @@ func main() {
 		requestStop()
 	}()
 
-	// Graceful shutdown when the parent closes our stdin. On Windows there is no
-	// real SIGTERM — Dart's Process.kill is a hard TerminateProcess that gives
-	// sing-box no chance to revert the TUN adapter, routes and DNS, which can
-	// leave the network/TUN broken after a disconnect or crash. The desktop
-	// launcher wires up a stdin pipe and closes it to ask for a clean stop.
+	// Graceful shutdown when the parent closes our stdin. Windows has no real
+	// SIGTERM: a hard TerminateProcess gives sing-box no chance to revert the TUN
+	// adapter, routes and DNS, so a launcher closes a stdin pipe to ask for a
+	// clean stop instead.
 	//
-	// Only watch stdin when it is an actual pipe. Under Android's fork+exec stdin
-	// is /dev/null or closed, so reading it returns EOF immediately — that must
-	// NOT be taken as a shutdown request (it would kill the tunnel the instant it
-	// starts).
+	// Only watch stdin when it is an actual pipe. When stdin is /dev/null or
+	// already closed, reading it returns EOF immediately, which must not be taken
+	// as a shutdown request.
 	go func() {
 		info, err := os.Stdin.Stat()
 		if err != nil || info.Mode()&os.ModeNamedPipe == 0 {
@@ -74,9 +72,8 @@ func main() {
 }
 
 // parseConfigPath resolves the config path from CLI args, accepting both
-// keqrnel's own `keqrnel <config>` form and xray's `run -c <config>` form so the
-// binary is a drop-in replacement for xray in keqdroid's launcher (which
-// fork+execs the core the same way regardless of engine).
+// keqrnel's own `keqrnel <config>` form and xray's `run -c <config>` form, so the
+// binary drops into launchers that already exec xray.
 func parseConfigPath(args []string) string {
 	for i := 0; i < len(args); i++ {
 		switch args[i] {

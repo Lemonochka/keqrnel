@@ -73,9 +73,8 @@ func outboundRegistry() *outbound.Registry {
 	block.RegisterOutbound(registry)
 	group.RegisterSelector(registry)
 	group.RegisterURLTest(registry)
-	// socks/http outbounds: keqrnel doubles as the generic sing-box TUN engine
-	// (e.g. AmneziaWG: wireproxy SOCKS -> keqrnel TUN), so it must dial a local
-	// socks/http upstream too, not only the embedded-xray bridge.
+	// socks/http outbounds: keqrnel also works as a plain TUN front-end for a
+	// local proxy upstream, not only for the embedded-xray bridge.
 	socks.RegisterOutbound(registry)
 	http.RegisterOutbound(registry)
 	xraybridge.Register(registry)

@@ -22,9 +22,9 @@
 ## What it is
 
 sing-box is the host: TUN, routing, DNS, sniffing, `clash_api` traffic counters.
-xray-core is linked in as a library and serves one outbound type, `"xray"`:
-VLESS, XHTTP, Reality, Vision, Mux, Hysteria2, and whatever else its JSON config
-takes. Protocols run on xray's own code, so the wire format is what a server
+xray-core is linked in as a library and serves one outbound type, `"xray"`, which
+handles VLESS, XHTTP, Reality, Vision, Mux, Hysteria2 and anything else its JSON
+config takes. Protocols run on xray's own code, so the wire format is what a server
 configured for upstream xray expects.
 
 ```
@@ -34,10 +34,8 @@ TUN (sing-tun) ─► routing ─► outbound "proxy" (type: xray)
                               embedded xray.Instance
 ```
 
-No loopback SOCKS between engines, no second process, no port to coordinate.
-
-Written for [keqdroid/KEQDIS](https://github.com/Lemonochka/keqdroid), but it does
-not depend on the app — anything that can write a sing-box config can run it.
+Written for [keqdroid/KEQDIS](https://github.com/Lemonochka/keqdroid), but
+independent of it: anything that can write a sing-box config can run it.
 
 ## The `xray` outbound
 
@@ -53,16 +51,13 @@ not depend on the app — anything that can write a sing-box config can run it.
 }
 ```
 
-The `xray` field is a raw xray config fragment (at minimum an `outbounds` array),
-handed to the embedded engine verbatim — that is what keeps you compatible with your
-servers. Everything around it is ordinary sing-box config. Full example with TUN and
-routing: [config.example.json](config.example.json).
+The `xray` field is a raw xray config fragment, at minimum an `outbounds` array,
+handed to the embedded engine as-is. Everything around it is ordinary sing-box
+config. Full example with TUN and routing: [config.example.json](config.example.json).
 
-Hysteria2 needs nothing special; it is an xray outbound like any other.
-
-sing-box's `socks` and `http` outbounds are registered too, so keqrnel also works as
-a TUN front-end for a local proxy upstream — that is how AmneziaWG is handled:
-`wireproxy` exposes a local SOCKS, keqrnel wraps it into the TUN.
+Hysteria2 is an xray outbound like any other and goes in the same fragment.
+sing-box's `socks` and `http` outbounds are registered as well, so keqrnel can also
+front a local proxy upstream.
 
 ## Build
 
@@ -72,13 +67,8 @@ go test ./...
 go build -o keqrnel ./cmd/keqrnel
 ```
 
-Go 1.26+ (required by xray-core). Builds natively on Windows and Linux,
-cross-compiles to `linux/arm64` and `darwin/arm64`.
-
-> sing-box's `include.*` helpers are deliberately unused: they register everything
-> sing-box ships (tor, naive, ssh, dhcp-dns, and a `dns/transport/local` that does
-> not compile on Windows). [core/registry.go](core/registry.go) assembles a curated
-> registry instead.
+Go 1.26+, required by xray-core. Native on Windows and Linux, cross-compiles to
+`linux/arm64` and `darwin/arm64`.
 
 ## Run
 
@@ -87,12 +77,12 @@ keqrnel config.json     # defaults to ./config.json
 keqrnel -c config.json  # xray-style flags work too, for drop-in launching
 ```
 
-A TUN inbound needs administrator/root (and `wintun.dll` next to the binary on
-Windows); a SOCKS/HTTP inbound does not.
+A TUN inbound needs administrator/root, plus `wintun.dll` next to the binary on
+Windows. A SOCKS/HTTP inbound does not.
 
-The process stops on SIGINT/SIGTERM and when its stdin pipe is closed. The second
-route lets a launcher ask for a clean shutdown — on Windows a hard `TerminateProcess`
-leaves the TUN adapter, routes and DNS unreverted.
+The process stops on SIGINT/SIGTERM, and on stdin EOF. A launcher that holds a stdin
+pipe can close it to request a clean shutdown rather than killing the process, which
+would leave the TUN adapter, routes and DNS unreverted.
 
 ## Layout
 
@@ -104,8 +94,8 @@ core/localdns/   the "local" DNS transport sing-box requires as a fallback
 bridge/xray/     embedded xray engine + the "xray" outbound
 ```
 
-[ARCHITECTURE.md](ARCHITECTURE.md) — how the bridge works and why the registries are
-curated. [ERROR-ANALYSIS.md](ERROR-ANALYSIS.md) — hazards, trade-offs, limits.
+How the bridge works, and why the registries are curated rather than pulled in with
+sing-box's `include.*`: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ## Versions
 
@@ -131,16 +121,13 @@ sing-box v1.13.13 · xray-core v1.260327.0 · Go 1.26+
 ### Что это
 
 sing-box — хост: TUN, роутинг, DNS, sniffing, счётчики трафика через `clash_api`.
-xray-core влинкован как библиотека и обслуживает один тип аутбаунда, `"xray"`:
-VLESS, XHTTP, Reality, Vision, Mux, Hysteria2 и всё прочее, что принимает его
-JSON-конфиг. Протоколы исполняет сам xray, поэтому на проводе ровно то, чего ждёт
-сервер, настроенный на свежий xray.
-
-Ни петли через локальный SOCKS между движками, ни второго процесса, ни порта,
-который надо согласовывать.
+xray-core влинкован как библиотека и обслуживает один тип аутбаунда, `"xray"`,
+который тянет VLESS, XHTTP, Reality, Vision, Mux, Hysteria2 и всё прочее, что
+принимает его JSON-конфиг. Протоколы исполняет сам xray, поэтому на проводе ровно
+то, чего ждёт сервер, настроенный на свежий xray.
 
 Написано для [keqdroid/KEQDIS](https://github.com/Lemonochka/keqdroid), но от
-приложения не зависит — запустит что угодно, умеющее написать sing-box-конфиг.
+приложения не зависит: запустит что угодно, умеющее написать sing-box-конфиг.
 
 ### Аутбаунд `xray`
 
@@ -156,16 +143,13 @@ JSON-конфиг. Протоколы исполняет сам xray, поэто
 }
 ```
 
-Поле `xray` — сырой фрагмент xray-конфига (как минимум массив `outbounds`), который
-отдаётся встроенному движку как есть; на этом и держится совместимость с вашими
-серверами. Всё вокруг — обычный конфиг sing-box. Полный пример с TUN и роутингом:
-[config.example.json](config.example.json).
+Поле `xray` — сырой фрагмент xray-конфига, как минимум массив `outbounds`, который
+отдаётся встроенному движку как есть. Всё вокруг — обычный конфиг sing-box. Полный
+пример с TUN и роутингом: [config.example.json](config.example.json).
 
-Hysteria2 не требует ничего особенного — это такой же xray-аутбаунд.
-
-Аутбаунды `socks` и `http` из sing-box тоже зарегистрированы, так что keqrnel годится
-и как TUN-фронтенд к локальному прокси-аплинку — так работает AmneziaWG: `wireproxy`
-поднимает локальный SOCKS, keqrnel заворачивает его в TUN.
+Hysteria2 — такой же xray-аутбаунд, кладётся в тот же фрагмент. Аутбаунды `socks` и
+`http` из sing-box тоже зарегистрированы, так что keqrnel умеет стоять и перед
+локальным прокси-аплинком.
 
 ### Сборка
 
@@ -175,13 +159,8 @@ go test ./...
 go build -o keqrnel ./cmd/keqrnel
 ```
 
-Нужен Go 1.26+ (требование xray-core). Нативно собирается под Windows и Linux,
-кросс-компилируется под `linux/arm64` и `darwin/arm64`.
-
-> Хелперы `include.*` из sing-box намеренно не используются: они регистрируют всё,
-> что sing-box вообще умеет (tor, naive, ssh, dhcp-dns и `dns/transport/local`,
-> который не компилируется под Windows). Вместо них курированный набор registry
-> собран в [core/registry.go](core/registry.go).
+Нужен Go 1.26+, это требование xray-core. Нативно под Windows и Linux,
+кросс-компиляция под `linux/arm64` и `darwin/arm64`.
 
 ### Запуск
 
@@ -190,12 +169,12 @@ keqrnel config.json     # по умолчанию ./config.json
 keqrnel -c config.json  # флаги в стиле xray тоже принимаются, для drop-in запуска
 ```
 
-TUN-инбаунду нужны права администратора/root (и `wintun.dll` рядом с бинарём на
-Windows), SOCKS/HTTP-инбаунду — нет.
+TUN-инбаунду нужны права администратора/root и `wintun.dll` рядом с бинарём на
+Windows. SOCKS/HTTP-инбаунду — нет.
 
-Процесс останавливается по SIGINT/SIGTERM и при закрытии своего stdin-пайпа. Второй
-путь нужен, чтобы лаунчер мог попросить корректное завершение: на Windows жёсткий
-`TerminateProcess` оставляет TUN-адаптер, маршруты и DNS неоткаченными.
+Процесс останавливается по SIGINT/SIGTERM и по EOF на stdin. Лаунчер, который держит
+stdin-пайп, может закрыть его и попросить корректное завершение вместо убийства
+процесса — иначе останутся неоткаченными TUN-адаптер, маршруты и DNS.
 
 ### Структура
 
@@ -207,8 +186,8 @@ core/localdns/   транспорт "local" для DNS, который sing-box 
 bridge/xray/     встроенный движок xray + аутбаунд "xray"
 ```
 
-[ARCHITECTURE.md](ARCHITECTURE.md) — как устроен мост и зачем курированные registry.
-[ERROR-ANALYSIS.md](ERROR-ANALYSIS.md) — грабли, компромиссы, ограничения.
+Как устроен мост и почему registry собраны вручную, а не через `include.*` из
+sing-box: [ARCHITECTURE.md](ARCHITECTURE.md).
 
 ### Версии
 
