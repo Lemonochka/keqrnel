@@ -71,3 +71,16 @@ func (t *Transport) Exchange(ctx context.Context, message *mDNS.Msg) (*mDNS.Msg,
 	}
 	return dns.FixedResponse(message.Id, question, addresses, C.DefaultDNSTTL), nil
 }
+
+// ExchangeAsync is required by adapter.DNSTransport since sing-box 1.14.
+//
+// The bundled hosts and fakeip transports answer inline (`callback(t.Exchange(...))`)
+// because they answer from memory. Ours blocks in the system resolver, and
+// dns.Client.exchangeToTransportAsync calls this on the caller's goroutine --
+// answering inline there would stall the very DNS path the async API exists to
+// keep moving. The deadline the client set on ctx still cuts the lookup short.
+func (t *Transport) ExchangeAsync(ctx context.Context, message *mDNS.Msg, callback func(response *mDNS.Msg, err error)) {
+	go func() {
+		callback(t.Exchange(ctx, message))
+	}()
+}

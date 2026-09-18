@@ -47,6 +47,11 @@ func TestVLESSFlatSettings(t *testing.T) {
 // TestVLESSVnextSettings covers the older "vnext" form, which xray still accepts.
 // Configs in the wild are full of it, and the fragment is passed through untouched,
 // so it has to keep working.
+//
+// The stream carries TLS only because it must: since 26.9.9 xray refuses a vless
+// outbound that has neither transport security nor vless encryption, unless the
+// server address is private (validateOutboundTransportSecurity in infra/conf).
+// This test is about the vnext wrapper, not about plaintext.
 func TestVLESSVnextSettings(t *testing.T) {
 	cfg := `{
 		"outbounds": [{
@@ -58,7 +63,11 @@ func TestVLESSVnextSettings(t *testing.T) {
 					"users": [{ "id": "` + testUUID + `", "encryption": "none", "flow": "xtls-rprx-vision" }]
 				}]
 			},
-			"streamSettings": { "network": "tcp", "security": "none" }
+			"streamSettings": {
+				"network": "tcp",
+				"security": "tls",
+				"tlsSettings": { "serverName": "www.example.com", "fingerprint": "chrome" }
+			}
 		}]
 	}`
 

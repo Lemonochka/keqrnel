@@ -12,6 +12,7 @@ import (
 	"context"
 
 	box "github.com/sagernet/sing-box"
+	"github.com/sagernet/sing-box/adapter/certificate"
 	"github.com/sagernet/sing-box/adapter/endpoint"
 	"github.com/sagernet/sing-box/adapter/inbound"
 	"github.com/sagernet/sing-box/adapter/outbound"
@@ -52,6 +53,10 @@ func Context(ctx context.Context) context.Context {
 		endpoint.NewRegistry(), // no endpoints: WireGuard/AmneziaWG are out of scope
 		dnsTransportRegistry(),
 		boxservice.NewRegistry(), // no extra services
+		// No certificate providers: upstream registers ACME, Tailscale and
+		// originca there, and all three issue certificates for inbounds that
+		// serve TLS. keqrnel is a client core and serves none.
+		certificate.NewRegistry(),
 	)
 }
 
