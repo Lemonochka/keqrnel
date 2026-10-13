@@ -59,6 +59,11 @@ config. Full example with TUN and routing: [config.example.json](config.example.
 Current xray puts the server and credentials directly under `settings`. Older
 configs that wrap them in a `vnext` array still parse, so both forms work.
 
+Optional `sniffing` takes the block of an xray inbound (`enabled`, `destOverride`,
+`metadataOnly`, `routeOnly`) and makes xray sniff every connection it is handed.
+Under TUN sing-box passes the destination as an IP even when it sniffed the domain
+itself, so without it xray's `domain` and `geosite` rules never match there.
+
 Hysteria2 is an xray outbound like any other and goes in the same fragment.
 sing-box's `socks` and `http` outbounds are registered as well, so keqrnel can also
 front a local proxy upstream.
@@ -154,6 +159,11 @@ xray-core влинкован как библиотека и обслуживае
 
 Актуальный xray кладёт адрес сервера и креды прямо в `settings`. Старые конфиги,
 которые заворачивают их в массив `vnext`, тоже разбираются — работают обе формы.
+
+Необязательный `sniffing` принимает блок входа xray (`enabled`, `destOverride`,
+`metadataOnly`, `routeOnly`), и xray распознаёт каждое переданное ему соединение.
+Под TUN sing-box отдаёт назначение адресом, даже если сам узнал домен, и без этого
+правила xray по `domain` и `geosite` там не срабатывают.
 
 Hysteria2 — такой же xray-аутбаунд, кладётся в тот же фрагмент. Аутбаунды `socks` и
 `http` из sing-box тоже зарегистрированы, так что keqrnel умеет стоять и перед

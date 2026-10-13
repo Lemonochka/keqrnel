@@ -12,6 +12,7 @@ import (
 	E "github.com/sagernet/sing/common/exceptions"
 	M "github.com/sagernet/sing/common/metadata"
 	N "github.com/sagernet/sing/common/network"
+	"github.com/xtls/xray-core/common/session"
 )
 
 // TypeName is the outbound type used in keqrnel config: { "type": "xray", ... }.
@@ -20,7 +21,29 @@ const TypeName = "xray"
 // Options is the config schema for the xray bridge outbound. Config carries the
 // user's raw xray JSON fragment (outbounds + optional routing), used verbatim.
 type Options struct {
-	Config json.RawMessage `json:"xray"`
+	Config   json.RawMessage  `json:"xray"`
+	Sniffing *SniffingOptions `json:"sniffing,omitempty"`
+}
+
+// SniffingOptions has the shape of an xray inbound's "sniffing" block, so the
+// app can pass the one it already generates for its own inbounds.
+type SniffingOptions struct {
+	Enabled      bool     `json:"enabled"`
+	DestOverride []string `json:"destOverride,omitempty"`
+	MetadataOnly bool     `json:"metadataOnly,omitempty"`
+	RouteOnly    bool     `json:"routeOnly,omitempty"`
+}
+
+func (s *SniffingOptions) request() *session.SniffingRequest {
+	if s == nil || !s.Enabled {
+		return nil
+	}
+	return &session.SniffingRequest{
+		Enabled:                        true,
+		OverrideDestinationForProtocol: s.DestOverride,
+		MetadataOnly:                   s.MetadataOnly,
+		RouteOnly:                      s.RouteOnly,
+	}
 }
 
 // Register wires the xray bridge outbound into a sing-box outbound registry.
@@ -34,8 +57,9 @@ func Register(registry *outbound.Registry) {
 // Box construction fails afterwards, and so config errors surface at start time.
 type Outbound struct {
 	outbound.Adapter
-	logger log.ContextLogger
-	config json.RawMessage
+	logger   log.ContextLogger
+	config   json.RawMessage
+	sniffing *session.SniffingRequest
 
 	mu     sync.RWMutex
 	engine *Engine
@@ -54,9 +78,10 @@ func New(ctx context.Context, router adapter.Router, logger log.ContextLogger, t
 		return nil, E.New("missing \"xray\" config fragment")
 	}
 	return &Outbound{
-		Adapter: outbound.NewAdapter(TypeName, tag, []string{N.NetworkTCP, N.NetworkUDP}, nil),
-		logger:  logger,
-		config:  options.Config,
+		Adapter:  outbound.NewAdapter(TypeName, tag, []string{N.NetworkTCP, N.NetworkUDP}, nil),
+		logger:   logger,
+		config:   options.Config,
+		sniffing: options.Sniffing.request(),
 	}, nil
 }
 
@@ -69,6 +94,7 @@ func (o *Outbound) Start(stage adapter.StartStage) error {
 	if err != nil {
 		return E.Cause(err, "start embedded xray engine")
 	}
+	engine.SetSniffing(o.sniffing)
 	o.mu.Lock()
 	o.engine = engine
 	o.mu.Unlock()
