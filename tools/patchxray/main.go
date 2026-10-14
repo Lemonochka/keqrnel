@@ -4,8 +4,8 @@
 // that tree, so a build differs from a plain one by the patches only.
 //
 //	go run ./tools/patchxray
-//	go build -modfile=go.patched.mod -tags with_gvisor ./cmd/keqrnel
-//	go test -modfile=go.patched.mod ./...
+//	go build -modfile go.patched.mod -tags with_gvisor ./cmd/keqrnel
+//	go test -modfile go.patched.mod ./...
 //
 // Run it from the module root. -extra adds patch directories applied after
 // keqrnel's own, for builds that need more (keqdroid's libxray.so). git must be
@@ -95,7 +95,7 @@ func run(src, modfile, extra string) error {
 	if err := os.WriteFile(strings.TrimSuffix(modfile, ".mod")+".sum", sum, 0o644); err != nil {
 		return err
 	}
-	fmt.Printf("wrote %s, build with -modfile=%s\n", modfile, modfile)
+	fmt.Printf("wrote %s, build with -modfile %s\n", modfile, modfile)
 	return nil
 }
 

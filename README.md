@@ -72,8 +72,8 @@ front a local proxy upstream.
 
 ```sh
 go run ./tools/patchxray
-go test -modfile=go.patched.mod ./...
-go build -modfile=go.patched.mod -tags with_gvisor -o keqrnel ./cmd/keqrnel
+go test -modfile go.patched.mod ./...
+go build -modfile go.patched.mod -tags with_gvisor -o keqrnel ./cmd/keqrnel
 ```
 
 keqrnel is built against the xray-core pinned in `go.mod` with `patches/xray-*.patch`
@@ -180,8 +180,8 @@ Hysteria2 — такой же xray-аутбаунд, кладётся в тот 
 
 ```sh
 go run ./tools/patchxray
-go test -modfile=go.patched.mod ./...
-go build -modfile=go.patched.mod -tags with_gvisor -o keqrnel ./cmd/keqrnel
+go test -modfile go.patched.mod ./...
+go build -modfile go.patched.mod -tags with_gvisor -o keqrnel ./cmd/keqrnel
 ```
 
 keqrnel собирается с xray-core из `go.mod`, на который наложены `patches/xray-*.patch`.
