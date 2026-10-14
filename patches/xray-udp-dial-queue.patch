@@ -1,0 +1,40 @@
+Keep a burst of incoming UDP instead of dropping it, for programs that embed xray.
+
+core.DialUDP hands out a PacketConn whose incoming packets wait in a channel
+of 16 (transport/internet/udp/dispatcher.go, DialDispatcher). When it is full,
+callback() releases the packet without a word. keqrnel gives every UDP
+session from sing-box's TUN and SOCKS inbounds to xray through this
+PacketConn (bridge/xray, ListenPacket), and sing-box reads it one packet at a
+time while writing each into the TUN, so any burst longer than 16 that
+arrives faster than that is cut.
+
+That is the shape of a video frame in a call or a screen share, and of a game
+server's snapshot. Measured on an isolated netns lab with keqdroid's Linux
+keqrnel, VLESS REALITY Vision, 2026-10-14: 30 fps x 40 packets of 1200 bytes
+from the server lost 30-39% on every TUN stack, MTU and EIN setting; 64
+packets back to back lost 13-38%. Upload lost nothing, and mihomo on the same
+lab lost nothing. A queue of 128 already brought every test to 0%; 512 leaves
+room for larger frames. A build with 16 left as is reproduced the loss, so the
+queue is the whole cause.
+
+Each waiting packet holds one pooled buffer, so a session costs memory only
+while its reader is behind.
+
+Applied by tools/patchxray. keqdroid builds its Android libxray.so from the
+same tree; standalone xray does not use core.DialUDP, so nothing changes there.
+
+diff --git a/transport/internet/udp/dispatcher.go b/transport/internet/udp/dispatcher.go
+index 963ce66..73fdfd1 100644
+--- a/transport/internet/udp/dispatcher.go
++++ b/transport/internet/udp/dispatcher.go
+@@ -171,7 +171,9 @@ type dispatcherConn struct {
+ 
+ func DialDispatcher(ctx context.Context, dispatcher routing.Dispatcher) (net.PacketConn, error) {
+ 	c := &dispatcherConn{
+-		cache: make(chan *udp.Packet, 16),
++		// keqrnel: 16 dropped a burst whenever the reader lagged, see
++		// patches/xray-udp-dial-queue.patch in keqrnel
++		cache: make(chan *udp.Packet, 512),
+ 		done:  done.New(),
+ 		ctx:   ctx,
+ 	}

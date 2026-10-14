@@ -2,6 +2,10 @@
 /keqrnel
 /keqrnel.exe
 /dist/
+# tools/patchxray: the patched xray-core tree and the module files pointing at it
+/.build/
+/go.*.mod
+/go.*.sum
 *.exe
 *.so
 *.test

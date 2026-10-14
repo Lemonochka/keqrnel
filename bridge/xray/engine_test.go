@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -179,5 +180,71 @@ func TestEngineSniffingRoutesByDomain(t *testing.T) {
 	}
 	if !echoed(&SniffingOptions{Enabled: false, DestOverride: []string{"http"}}) {
 		t.Fatal("a disabled sniffing block must change nothing")
+	}
+}
+
+// TestEngineUDPKeepsBurst: sing-box reads a UDP session one packet at a time and
+// writes each into the TUN, so the session queue must hold a burst until it
+// catches up. Stock xray kept 16 and dropped the rest: calls, screen shares and
+// game snapshots lost up to 39% of incoming packets. Fails on a build without
+// patches/xray-udp-dial-queue.patch, that is on a plain `go test`.
+func TestEngineUDPKeepsBurst(t *testing.T) {
+	const burst = 200
+	pc, err := net.ListenPacket("udp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer pc.Close()
+	go func() {
+		buf := make([]byte, 1500)
+		_, addr, err := pc.ReadFrom(buf)
+		if err != nil {
+			return
+		}
+		for i := 0; i < burst; i++ {
+			pc.WriteTo(make([]byte, 100), addr)
+		}
+	}()
+
+	const cfg = `{ "outbounds": [{ "protocol": "freedom", "settings": {} }] }`
+	engine, err := NewEngine([]byte(cfg))
+	if err != nil {
+		t.Fatalf("NewEngine: %v", err)
+	}
+	defer engine.Close()
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	conn, err := engine.DialUDPPacket(ctx)
+	if err != nil {
+		t.Fatalf("DialUDPPacket: %v", err)
+	}
+	defer conn.Close()
+
+	if _, err = conn.WriteTo([]byte("burst"), pc.LocalAddr()); err != nil {
+		t.Fatalf("write: %v", err)
+	}
+	// the reader is busy while the burst arrives
+	time.Sleep(300 * time.Millisecond)
+
+	// xray's PacketConn ignores read deadlines, so the reader runs aside and
+	// the deferred Close unblocks it
+	var got atomic.Int32
+	all := make(chan struct{})
+	go func() {
+		buf := make([]byte, 1500)
+		for {
+			if _, _, err := conn.ReadFrom(buf); err != nil {
+				return
+			}
+			if got.Add(1) == burst {
+				close(all)
+			}
+		}
+	}()
+	select {
+	case <-all:
+	case <-time.After(2 * time.Second):
+		t.Fatalf("kept %d of a %d-packet burst", got.Load(), burst)
 	}
 }

@@ -71,10 +71,17 @@ front a local proxy upstream.
 ## Build
 
 ```sh
-go build ./...
-go test ./...
-go build -o keqrnel ./cmd/keqrnel
+go run ./tools/patchxray
+go test -modfile=go.patched.mod ./...
+go build -modfile=go.patched.mod -tags with_gvisor -o keqrnel ./cmd/keqrnel
 ```
+
+keqrnel is built against the xray-core pinned in `go.mod` with `patches/xray-*.patch`
+applied. `tools/patchxray` downloads that revision, applies the patches (git must be on
+PATH) and writes `go.patched.mod`, which differs from `go.mod` by one `replace`. A plain
+`go build` still works and gives the unpatched core; the patch headers say what that
+loses, and `TestEngineUDPKeepsBurst` fails there on purpose. `with_gvisor` brings the
+`gvisor` and `mixed` TUN stacks.
 
 Go 1.26+, required by xray-core. Native on Windows and Linux, cross-compiles to
 `linux/arm64` and `darwin/arm64`.
@@ -172,10 +179,17 @@ Hysteria2 — такой же xray-аутбаунд, кладётся в тот 
 ### Сборка
 
 ```sh
-go build ./...
-go test ./...
-go build -o keqrnel ./cmd/keqrnel
+go run ./tools/patchxray
+go test -modfile=go.patched.mod ./...
+go build -modfile=go.patched.mod -tags with_gvisor -o keqrnel ./cmd/keqrnel
 ```
+
+keqrnel собирается с xray-core из `go.mod`, на который наложены `patches/xray-*.patch`.
+`tools/patchxray` скачивает эту ревизию, накладывает патчи (нужен git в PATH) и пишет
+`go.patched.mod`, который отличается от `go.mod` одной строкой `replace`. Обычный
+`go build` по-прежнему работает и даёт ядро без патчей; что при этом теряется, написано
+в шапках патчей, а `TestEngineUDPKeepsBurst` там нарочно падает. `with_gvisor` даёт
+стеки TUN `gvisor` и `mixed`.
 
 Нужен Go 1.26+, это требование xray-core. Нативно под Windows и Linux,
 кросс-компиляция под `linux/arm64` и `darwin/arm64`.
