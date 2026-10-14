@@ -86,7 +86,9 @@ func New(ctx context.Context, router adapter.Router, logger log.ContextLogger, t
 }
 
 // Start boots the embedded xray engine when the Box reaches the start stage.
-func (o *Outbound) Start(stage adapter.StartStage) error {
+// Since sing-box 1.14.3 nothing calls Close on an outbound: the engine stops
+// through the cleanup registered in the start scope, or it would outlive the Box.
+func (o *Outbound) Start(stage adapter.StartStage, scope *adapter.Scope) error {
 	if stage != adapter.StartStateStart {
 		return nil
 	}
@@ -98,6 +100,7 @@ func (o *Outbound) Start(stage adapter.StartStage) error {
 	o.mu.Lock()
 	o.engine = engine
 	o.mu.Unlock()
+	scope.Add(o.Close)
 	return nil
 }
 
